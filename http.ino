@@ -1,25 +1,11 @@
 
 enum { NONE=0, INDEX, XML };
 
- void modeHttp(void)
+ void handleRelayPageHTML(void)
  {
-  WiFiClient client = server.available();   // listen for incoming clients
- int pos, page = 0;
  
-  if (client) {                             // if you get a client,
- //   Serial.println("New Client.");           // print a message out the serial port
-    String currentLine = "";                // make a String to hold incoming data from the client
-    while (client.connected()) {            // loop while the client's connected
-      if (client.available()) {             // if there's bytes to read from the client,
-        char c = client.read();             // read a byte, then
-//        Serial.write(c);                    // print it out the serial monitor
-        if (c == '\n') {                    // if the byte is a newline character
-          
-          // if the current line is blank, you got two newline characters in a row.
-          // that's the end of the client HTTP request, so send a response:
-          if (currentLine.length() == 0) {
-
-            if(page==INDEX) {
+ 
+ 
               // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
               // and a content-type so the client knows what's coming, then a blank line:
               client.println("HTTP/1.1 200 OK");
@@ -117,7 +103,10 @@ enum { NONE=0, INDEX, XML };
               // The HTTP response ends with another blank line:
               client.println();             
             }
-            else if(page==XML) {
+            }
+void handleRelayPageXML(void)
+ {            
+          
               client.println("HTTP/1.1 200 OK");
               client.println("Content-type:application/xml");
               client.println();
@@ -155,10 +144,7 @@ enum { NONE=0, INDEX, XML };
             // break out of the while loop:
             break;
           } else {    // check for a GET command
-            if(currentLine.startsWith("GET / ")) page=INDEX;
-            else if(currentLine.startsWith("GET /INDEX.HTM")) page=INDEX;
-            else if(currentLine.startsWith("GET /STATUS.XML")) page=XML;
-            else if(currentLine.startsWith("GET /?RLY")) page=XML;
+            
             currentLine = "";
           }
           
@@ -239,3 +225,44 @@ enum { NONE=0, INDEX, XML };
 //Serial.println("Client Disconnected.");
   }
  }
+
+void setupHttpServer(){
+  //SERVER INIT
+  //list directory
+  Server.on("/list", HTTP_GET, handleFileList);
+  //load editor
+  Server.on("/edit", HTTP_GET, []() {
+    if (!handleFileRead("/edit.htm")) {
+      Server.send(404, "text/plain", "FileNotFound");
+    }
+  });
+  //create file
+  Server.on("/edit", HTTP_PUT, handleFileCreate);
+  //delete file
+  Server.on("/edit", HTTP_DELETE, handleFileDelete);
+  //first callback is called after the request has ended with all parsed arguments
+  //second callback handles file uploads at that location
+  Server.on("/edit", HTTP_POST, []() {
+    Server.send(200, "text/plain", "");
+  }, handleFileUpload);
+
+  //called when the url is not defined here
+  //use it to load content from FILESYSTEM
+  Server.onNotFound([]() {
+    if (!handleFileRead(Server.uri())) {
+      Server.send(404, "text/plain", "FileNotFound");
+    }
+  });
+
+  //get heap status, analog input value and all GPIO statuses in one json call
+  Server.on("/all", HTTP_GET, []() {
+    String json = "{";
+    json += "\"heap\":" + String(ESP.getFreeHeap());
+    json += ", \"analog\":" + String(analogRead(A0));
+    json += ", \"gpio\":" + String((uint32_t)(0));
+    json += "}";
+    Server.send(200, "text/json", json);
+    json = String();
+  });
+}
+}

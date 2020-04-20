@@ -1,12 +1,22 @@
 
+
 #include <Preferences.h>
 #include <WiFi.h>
+#include <WebServer.h>
+#include <AutoConnect.h>
 
-const char ver[] = {"1.5"};
+
+const char ver[] = {"2.1"};
 const char moduleID = 41;       // ESP32LR20 = 39, LR42=40, LR88=41
 
 Preferences nvm;
-WiFiServer server(80);
+WebServer Server;
+AutoConnect portal(Server);
+AutoConnectConfig Config;
+//AutoConnectCredential Credential;
+AutoConnectUpdate autoConnectUpdate;
+AutoConnectUpdate update("10.100.6.36", 1380, "/updates/ESP32LR88", 30000, HIGH);
+//WiFiServer server(80);
 WiFiServer tcpServer(0);
 
 IPAddress local_IP(192, 168, 0, 121);
@@ -96,16 +106,109 @@ void setup()
     Serial.begin(115200);
     delay(10);
     
+     //Credential = AutoConnectCredential();
+    Config.boundaryOffset = 256;
+    Config.autoReconnect = true;
+    //Config.ota=AC_OTA_BUILTIN;
+    uint64_t chipid = ESP.getEfuseMac();
+    Config.apid = "ESP32LR88" + String((uint32_t)chipid, HEX);
+    Config.psk = "";
+    Config.ticker = true;
+    Config.tickerPort = Led;
+    Config.tickerOn = HIGH;
+    //Config.autoSave = AC_SAVECREDENTIAL_NEVER;
+    portal.config(Config);
+    update.setLedPin(Led, LOW);
+    update.attach(portal);
+    portal.onDetect(atDetect);
+    
     wifi_connect();
 }
 
 
 void loop(){
-  modeHttp();
+  //modeHttp();
   modeAscii();
   modeMQTT();
   serialMonitor();
+  portal.handleClient();
+  if (WiFi.status() == WL_IDLE_STATUS) {
+    Serial.println("Wifi is idle");
+    //ESP.restart();
+    delay(1000);
+  }
   if(WiFi.status() != WL_CONNECTED) wifi_connect(); 
+}
+
+void handleRoot() {
+  String page = PSTR(
+"<html>"
+"<head>"
+  "<title>Andy Is Super Cool </title>"
+  "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
+  "<script type=\"text/javascript\">"
+  "function updateConfig(){"
+  "var url=\"/config?\";"
+   "url += \"serverHostName=\" + document.getElementById(\"serverHostName\").value;"
+   "url += \"&serverPort=\" + document.getElementById(\"serverPort\").value;"
+   "url += \"&password=\" + document.getElementById(\"password\").value;"
+   "window.location.href = url;"
+  "}"
+  "</script>"
+  "<style type=\"text/css\">"
+    "body {"
+    "-webkit-appearance:none;"
+    "-moz-appearance:none;"
+    "font-family:'Arial',sans-serif;"
+    "text-align:center;"
+    "}"
+    ".menu > a:link {"
+    "position: absolute;"
+    "display: inline-block;"
+    "right: 12px;"
+    "padding: 0 6px;"
+    "text-decoration: none;"
+    "}"
+    ".button {"
+    "display:inline-block;"
+    "border-radius:7px;"
+    "background:#73ad21;"
+    "margin:0 10px 0 10px;"
+    "padding:10px 20px 10px 20px;"
+    "text-decoration:none;"
+    "color:#000000;"
+    "}"
+  "</style>"
+"</head>"
+"<body>"
+  "<div class=\"menu\">" AUTOCONNECT_LINK(BAR_32) "</div>"
+  "Radar Server Config<br>"
+  "Server :");
+  
+  page += String(F(" <input id=\"serverHostName\" value=\""));
+ // page += radarServerHostName;
+  page += String(F("\"/><br/>"));
+  page += String(F(" Port <input id=\"serverPort\" value=\""));
+  //page += String(radarServerPortNumber);
+  page += String(F("\"/><br/>"));
+  page += String(F(" Password <input id=\"password\" type=\"password\" value=\"\"/><br/>"));
+  page += String(F("<p><a class=\"button\" href=\"javascript:updateConfig();\">Save</a></p>"));
+  page += String(F("</body></html>"));
+  portal.host().send(200, "text/html", page);
+}
+
+void sendRedirect(String uri) {
+  WebServerClass& server = portal.host();
+  server.sendHeader("Location", uri, true);
+  server.send(302, "text/plain", "");
+  server.client().stop();
+}
+
+bool atDetect(IPAddress ip) {
+  
+  Serial.println("C.P. started, IP:" + ip.toString());
+ 
+  return true;
 }
 
 void wifi_connect(void)
@@ -145,35 +248,49 @@ void wifi_connect(void)
     nvm.getString("N8Topic", N8Topic, BUFSIZE-1);   
     nvm.getString("AsciiPassword", AsciiPassword, BUFSIZE-1);      
 
-    // We start by connecting to a WiFi network
-    Serial.print("Connecting to ");
-    Serial.print(ssid);
-    Serial.println("...");
+//    // We start by connecting to a WiFi network
+//    Serial.print("Connecting to ");
+//    Serial.print(ssid);
+//    Serial.println("...");
+//
+//    if(local_IP != 0) {
+//      if (!WiFi.config(local_IP, gateway, subnet, primaryDNS, secondaryDNS)) {
+//        Serial.println("STA Failed to configure");
+//      }
+//    }
+//    WiFi.mode(WIFI_STA);
+//
+//    while(WiFi.status() != WL_CONNECTED){
+//      WiFi.disconnect();
+//      delay(100);     
+//      WiFi.begin(ssid, WifiPassword);
+//      for(x = 0; x < 300; x++){
+//        delay(10);
+//        serialMonitor();
+//      }
+//    }
 
-    if(local_IP != 0) {
-      if (!WiFi.config(local_IP, gateway, subnet, primaryDNS, secondaryDNS)) {
-        Serial.println("STA Failed to configure");
-      }
-    }
-    WiFi.mode(WIFI_STA);
+   
+    if (portal.begin()) {
+      setupFileSystem();
+      Server.on("/", handleRoot);
 
-    while(WiFi.status() != WL_CONNECTED){
-      WiFi.disconnect();
-      delay(100);     
-      WiFi.begin(ssid, WifiPassword);
-      for(x = 0; x < 300; x++){
-        delay(10);
-        serialMonitor();
-      }
+//      if(currentLine.startsWith("GET / ")) page=INDEX;
+//            else if(currentLine.startsWith("GET /INDEX.HTM")) page=INDEX;
+//            else if(currentLine.startsWith("GET /STATUS.XML")) page=XML;
+//            else if(currentLine.startsWith("GET /?RLY")) page=XML;
+      digitalWrite(Led, LOW);
+      Serial.println("");
+      Serial.println("WiFi connected.");
+      Serial.print("IP address: ");
+      Serial.println(WiFi.localIP());
+      //server.begin();
+      tcpServer.close();
+      tcpServer = WiFiServer(AsciiPort);
+      tcpServer.begin();
+      setupMQTT();   
+    } else {
+      Serial.println("Wifi Connection failed.");
+      while (true) { yield(); }
     }
-    digitalWrite(Led, LOW);
-    Serial.println("");
-    Serial.println("WiFi connected.");
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
-    server.begin();
-    tcpServer.close();
-    tcpServer = WiFiServer(AsciiPort);
-    tcpServer.begin();
-    setupMQTT();   
 }
