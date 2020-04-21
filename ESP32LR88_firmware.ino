@@ -126,11 +126,13 @@ void setup()
 }
 
 
+
 void loop(){
   //modeHttp();
   modeAscii();
   modeMQTT();
   serialMonitor();
+  modeInput();
   portal.handleClient();
   if (WiFi.status() == WL_IDLE_STATUS) {
     Serial.println("Wifi is idle");
@@ -138,70 +140,6 @@ void loop(){
     delay(1000);
   }
   if(WiFi.status() != WL_CONNECTED) wifi_connect(); 
-}
-
-void handleRoot() {
-  String page = PSTR(
-"<html>"
-"<head>"
-  "<title>Andy Is Super Cool </title>"
-  "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
-  "<script type=\"text/javascript\">"
-  "function updateConfig(){"
-  "var url=\"/config?\";"
-   "url += \"serverHostName=\" + document.getElementById(\"serverHostName\").value;"
-   "url += \"&serverPort=\" + document.getElementById(\"serverPort\").value;"
-   "url += \"&password=\" + document.getElementById(\"password\").value;"
-   "window.location.href = url;"
-  "}"
-  "</script>"
-  "<style type=\"text/css\">"
-    "body {"
-    "-webkit-appearance:none;"
-    "-moz-appearance:none;"
-    "font-family:'Arial',sans-serif;"
-    "text-align:center;"
-    "}"
-    ".menu > a:link {"
-    "position: absolute;"
-    "display: inline-block;"
-    "right: 12px;"
-    "padding: 0 6px;"
-    "text-decoration: none;"
-    "}"
-    ".button {"
-    "display:inline-block;"
-    "border-radius:7px;"
-    "background:#73ad21;"
-    "margin:0 10px 0 10px;"
-    "padding:10px 20px 10px 20px;"
-    "text-decoration:none;"
-    "color:#000000;"
-    "}"
-  "</style>"
-"</head>"
-"<body>"
-  "<div class=\"menu\">" AUTOCONNECT_LINK(BAR_32) "</div>"
-  "Radar Server Config<br>"
-  "Server :");
-  
-  page += String(F(" <input id=\"serverHostName\" value=\""));
- // page += radarServerHostName;
-  page += String(F("\"/><br/>"));
-  page += String(F(" Port <input id=\"serverPort\" value=\""));
-  //page += String(radarServerPortNumber);
-  page += String(F("\"/><br/>"));
-  page += String(F(" Password <input id=\"password\" type=\"password\" value=\"\"/><br/>"));
-  page += String(F("<p><a class=\"button\" href=\"javascript:updateConfig();\">Save</a></p>"));
-  page += String(F("</body></html>"));
-  portal.host().send(200, "text/html", page);
-}
-
-void sendRedirect(String uri) {
-  WebServerClass& server = portal.host();
-  server.sendHeader("Location", uri, true);
-  server.send(302, "text/plain", "");
-  server.client().stop();
 }
 
 bool atDetect(IPAddress ip) {
@@ -273,12 +211,7 @@ void wifi_connect(void)
    
     if (portal.begin()) {
       setupFileSystem();
-      Server.on("/", handleRoot);
-
-//      if(currentLine.startsWith("GET / ")) page=INDEX;
-//            else if(currentLine.startsWith("GET /INDEX.HTM")) page=INDEX;
-//            else if(currentLine.startsWith("GET /STATUS.XML")) page=XML;
-//            else if(currentLine.startsWith("GET /?RLY")) page=XML;
+      setupHttpServer();
       digitalWrite(Led, LOW);
       Serial.println("");
       Serial.println("WiFi connected.");
