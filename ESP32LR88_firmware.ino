@@ -4,18 +4,20 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include <AutoConnect.h>
+#include <ESPmDNS.h>
 
 
 const char ver[] = {"2.1"};
 const char moduleID = 41;       // ESP32LR20 = 39, LR42=40, LR88=41
-
+const char* mDnsHostName = "esp32LR88";  
+String hostName = "esp32LR88"; //We Append Mac Address below
 Preferences nvm;
 WebServer Server;
 AutoConnect portal(Server);
 AutoConnectConfig Config;
 //AutoConnectCredential Credential;
-AutoConnectUpdate autoConnectUpdate;
-AutoConnectUpdate update("10.100.6.36", 1380, "/updates/ESP32LR88", 30000, HIGH);
+//AutoConnectUpdate autoConnectUpdate;
+//AutoConnectUpdate update("10.100.6.36", 1380, "/updates/ESP32LR88", 30000, HIGH);
 //WiFiServer server(80);
 WiFiServer tcpServer(0);
 
@@ -109,17 +111,18 @@ void setup()
      //Credential = AutoConnectCredential();
     Config.boundaryOffset = 256;
     Config.autoReconnect = true;
-    //Config.ota=AC_OTA_BUILTIN;
+    Config.ota=AC_OTA_BUILTIN;
     uint64_t chipid = ESP.getEfuseMac();
-    Config.apid = "ESP32LR88" + String((uint32_t)chipid, HEX);
+    hostName = "ESP32LR88" + String((uint32_t)chipid, HEX);
+    Config.apid = hostName;
     Config.psk = "";
     Config.ticker = true;
     Config.tickerPort = Led;
     Config.tickerOn = HIGH;
     //Config.autoSave = AC_SAVECREDENTIAL_NEVER;
     portal.config(Config);
-    update.setLedPin(Led, LOW);
-    update.attach(portal);
+//    update.setLedPin(Led, LOW);
+//    update.attach(portal);
     portal.onDetect(atDetect);
     
     wifi_connect();
@@ -128,7 +131,6 @@ void setup()
 
 
 void loop(){
-  //modeHttp();
   modeAscii();
   modeMQTT();
   serialMonitor();
@@ -184,7 +186,9 @@ void wifi_connect(void)
     nvm.getString("N6Topic", N6Topic, BUFSIZE-1);    
     nvm.getString("N7Topic", N7Topic, BUFSIZE-1);    
     nvm.getString("N8Topic", N8Topic, BUFSIZE-1);   
-    nvm.getString("AsciiPassword", AsciiPassword, BUFSIZE-1);      
+    nvm.getString("AsciiPassword", AsciiPassword, BUFSIZE-1); 
+
+    loadInputData();
 
 //    // We start by connecting to a WiFi network
 //    Serial.print("Connecting to ");
@@ -210,6 +214,12 @@ void wifi_connect(void)
 
    
     if (portal.begin()) {
+      MDNS.begin(mDnsHostName);
+      MDNS.setInstanceName(hostName);
+      MDNS.addService("_http", "_tcp", 80);
+      Serial.print("Open http://");
+      Serial.print(mDnsHostName);
+      Serial.println(".local ");
       setupFileSystem();
       setupHttpServer();
       digitalWrite(Led, LOW);
@@ -217,7 +227,6 @@ void wifi_connect(void)
       Serial.println("WiFi connected.");
       Serial.print("IP address: ");
       Serial.println(WiFi.localIP());
-      //server.begin();
       tcpServer.close();
       tcpServer = WiFiServer(AsciiPort);
       tcpServer.begin();

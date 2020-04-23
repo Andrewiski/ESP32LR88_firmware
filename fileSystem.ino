@@ -8,6 +8,12 @@
 #include <SPIFFS.h>
 #endif
 
+
+
+
+
+
+
 File fsUploadFile;
 
 //format bytes
@@ -180,6 +186,26 @@ void handleFileList() {
   Server.send(200, "text/json", output);
 }
 
+String readFileAsString(String path){
+  
+  File file = FILESYSTEM.open(path);
+  if(!file || file.isDirectory()){
+      Serial.println("- failed to open file for reading");
+      return "";
+  }
+
+  String strData = "";
+  while(file.available()){
+      strData = strData + (char) file.read();
+  }
+  file.close();
+  return strData;
+}
+
+
+
+
+
 void setupFileSystem(){
   if (FORMAT_FILESYSTEM) FILESYSTEM.format();
   FILESYSTEM.begin();
@@ -194,9 +220,5 @@ void setupFileSystem(){
       }
       Serial.printf("\n");
   }
-
-  
-  
-  
 
 }

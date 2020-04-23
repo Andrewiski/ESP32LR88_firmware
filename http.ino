@@ -97,6 +97,7 @@ void setupHttpServer(){
   //SERVER INIT
   //get all GPIO statuses in one json call
   Server.on("/gpio", HTTP_GET, handleRelayPageJson);
+  Server.on("/inputRelays", HTTP_GET, handleInputRelayPageJson);
   Server.on("/autoconnectMenu", HTTP_GET, handleMenuHtml);
   
   //list directory

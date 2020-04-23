@@ -15,16 +15,16 @@
 			function(data){
 				for(var i = 0; i < data.relays.length; i ++){
 					if(data.relays[i] === 1){
-						$(".Rly" + (i+1) ).addClass("relayOn").removeClass("relayOff");
+						$("button.Rly" + (i+1) ).addClass("relayOn").removeClass("relayOff");
 					}else{
-						$(".Rly" + (i+1) ).addClass("relayOff").removeClass("relayOn");
+						$("button.Rly" + (i+1) ).addClass("relayOff").removeClass("relayOn");
 					}
 				}
 				for(var i = 0; i < data.inputs.length; i ++){
-					if(data.inputs[i] === 1){
-						$(".Inp" + (i+1) ).attr('checked',false);;
+					if(data.inputs[i] === 0){
+						$(".Inp" + (i+1)).find(".Inp").addClass("inputOn").removeClass("inputOff"); //.attr('checked',false);;
 					}else{
-						$(".Inp" + (i+1) ).attr('checked',true);;
+						$(".Inp" + (i+1)).find(".Inp").addClass("inputOff").removeClass("inputOn"); //.attr('checked',true);;
 					}
 				}
 			}, 
@@ -41,56 +41,215 @@
 	var getMenu = function(){
 		$( "div.menu" ).load( "/autoconnectMenu" );
 	}
+	
+	var getConfig = function(){
+		$.getJSON( 'config.json').then(
+			function(data){
+				$(".boardName").text(data.boardName);
+				for(var i = 0; i < data.relays.length; i ++){
+					$("button.Rly" + (i+1) ).text(data.relays[i].name);
+					$("th.Rly" + (i+1) ).text(data.relays[i].name);
+				}
+				for(var i = 0; i < data.inputs.length; i ++){
+					$(".Inp" + (i+1)).find("label.Inp").text(data.inputs[i].name);
+				}
+			}, 
+			function(jqxhr, textStatus, err){
+				console.log("error", "Error geting Config", err);
+			}
+		);
+	}
+	
+	var getInputRelays = function(input, relay){
+		let url = "/inputRelays";
+		if (input && relay){
+			url = url + "?input=" + input + "&relay=" + relay
+		}
+		$.getJSON( url).then(
+			function(data){
+				
+				for(var i = 0; i < data.inputRelays.length; i ++){
+					var val = data.inputRelays[i];
+					for(var k = 0; k < 8; k ++){
+						if( Math.pow(2,k) == (Math.pow(2,k) & val)){
+							$(".Inp" + (i+1)).find("input.inputRelay" + (k+1) ).attr('checked',true);	
+						}else{
+							$(".Inp" + (i+1)).find("input.inputRelay" + (k+1) ).attr('checked',false);;
+						}
+					}
+					
+					
+				}
+			}, 
+			function(jqxhr, textStatus, err){
+				console.log("error", "Error geting Relay and Input State", err);
+			}
+		);
+	}
+	
 	$(function(){
 		getMenu();
-		
+		getConfig();
+		getInputRelays();
 		updateRelaysAndInputs();
+		$("input.inputRelay").on("change", function (evt){
+			//class="Inp1" data-input="1"
+			var $parent = $(evt.target).closest(".Inp")
+			var input = $parent.attr("data-input");
+			var relays = 0;
+			$.each($parent.find("input.inputRelay:checked"), function(index,item){
+				relays = relays | parseInt($(item).val());
+			
+			})
+			getInputRelays(input, relays);
+		});
 		setInterval(updateRelaysAndInputs, 10000);
 	});
   </script>
   <style>
   	.Rly {
-		width:44%;height:35px;margin:5px;
+		display:inline-block;
+	    border-radius:7px;
+	    background-color:#ccc;
+	    margin:0 10px 0 10px;
+	    padding:10px 20px 10px 20px;
+	    text-decoration:none;
+	    color:#000000;
 		}
-	.relayOn{
-		background-color:green;
+	.Rly.relayOn{
+		background-color:#2196F3;
 	}
-	.relayOf{
-		
+	.Rly.relayOff{
+		background-color:#ccc;
 	}
-	.inputOn{
-		
+	
+	
+	
+	/* The switch - the box around the slider */
+	.switch {
+	  position: relative;
+	  display: inline-block;
+	  width: 60px;
+	  height: 34px;
 	}
-	.inputOff{
-		
+	
+	/* Hide default HTML checkbox */
+	.switch input {
+	  opacity: 0;
+	  width: 0;
+	  height: 0;
 	}
-	"body {"
-    "-webkit-appearance:none;"
-    "-moz-appearance:none;"
-    "font-family:'Arial',sans-serif;"
-    "text-align:center;"
-    "}"
-    ".menu > a:link {"
-    "position: absolute;"
-    "display: inline-block;"
-    "right: 12px;"
-    "padding: 0 6px;"
-    "text-decoration: none;"
-    "}"
-    ".button {"
-    "display:inline-block;"
-    "border-radius:7px;"
-    "background:#73ad21;"
-    "margin:0 10px 0 10px;"
-    "padding:10px 20px 10px 20px;"
-    "text-decoration:none;"
-    "color:#000000;"
-    "}"
+	
+	/* The slider */
+	.slider {
+	  position: absolute;
+	  cursor: pointer;
+	  top: 0;
+	  left: 0;
+	  right: 0;
+	  bottom: 0;
+	  background-color: #ccc;
+	  -webkit-transition: .4s;
+	  transition: .4s;
+	}
+	
+	.slider:before {
+	  position: absolute;
+	  content: "";
+	  height: 26px;
+	  width: 26px;
+	  left: 4px;
+	  bottom: 4px;
+	  background-color: white;
+	  -webkit-transition: .4s;
+	  transition: .4s;
+	}
+	
+	input:checked + .slider {
+	  background-color: #2196F3;
+	}
+	
+	input:focus + .slider {
+	  box-shadow: 0 0 1px #2196F3;
+	}
+	
+	input:checked + .slider:before {
+	  -webkit-transform: translateX(26px);
+	  -ms-transform: translateX(26px);
+	  transform: translateX(26px);
+	}
+	
+	
+	
+	/* Rounded sliders */
+	.slider.round {
+	  border-radius: 34px;
+	}
+	
+	.slider.round:before {
+	  border-radius: 50%;
+	}
+	
+
+	.circleCenter{
+		position:relative;
+	}
+	/* The slider */
+	.circle {
+	  position:absolute;
+	  background-color: #ccc;
+      border-radius: 50%;
+      width: 15px;
+      height: 15px;
+	  left: 50%;
+	  stroke: currentColor;
+	  stroke-width: 0;
+	  top: 50%;
+	  transform: translate(-50%, -50%);
+	}
+	
+	.circle.inputOn{
+		background-color: #2196F3;
+	}
+	.circle.inputOff{
+		background-color: #ccc;
+	}
+	
+	
+	body {
+	    -webkit-appearance:none;
+	    -moz-appearance:none;
+	    font-family:'Arial',sans-serif;
+	    text-align:center;
+    }
+    .menu > a:link {
+	    position: absolute;
+	    display: inline-block;
+	    right: 12px;
+	    padding: 0 6px;
+	    text-decoration: none;
+    }
+    .button {
+	    display:inline-block;
+	    border-radius:7px;
+	    background:#73ad21;
+	    margin:0 10px 0 10px;
+	    padding:10px 20px 10px 20px;
+	    text-decoration:none;
+	    color:#000000;
+    }
+	table {
+	  border-collapse: collapse;
+	}
+	
+	table, th, td {
+	  border: 1px solid black;
+	}
    </style>
 </head>
 <body>
   <div class="menu"></div>
-  <p style="text-align:center"><b>ESP32LR88</b> <br></p>
+  <p style="text-align:center"><b> <span class="boardName">ESP32LR88</span></b> <br/></p>
   
 <button class="Rly Rly1"; onclick="toggleRelay(1)"; >Relay 1</button>
 <button class="Rly Rly2"; onclick="toggleRelay(2)"; >Relay 2</button>
@@ -102,15 +261,123 @@
 <button class="Rly Rly8"; onclick="toggleRelay(8)"; >Relay 8</button>
 <br/>
 <br/>
-<div> Inputs 
-<input type="radio" class="Inp Inp1">
-<input type="radio" class="Inp Inp2">
-<input type="radio" class="Inp Inp3">
-<input type="radio" class="Inp Inp4">
-<input type="radio" class="Inp Inp5">
-<input type="radio" class="Inp Inp6">
-<input type="radio" class="Inp Inp7">
-<input type="radio" class="Inp Inp8">
+<div class="inputs">  
+	<div> Inputs 
+		<table>
+			<thead>
+			<tr><th>Name</th> 
+				<th>On/Off</th>
+				<th class="Rly1">Relay 1</th>
+				<th class="Rly2">Relay 2</th>
+				<th class="Rly3">Relay 3</th>
+				<th class="Rly4">Relay 4</th>
+				<th class="Rly5">Relay 5</th>
+				<th class="Rly6">Relay 6</th>
+				<th class="Rly7">Relay 7</th>
+				<th class="Rly8">Relay 8</th>
+			</tr>
+			</thead>
+			<tbody>
+				<tr class="Inp Inp1" data-input="1">
+					<td><label class="Inp">Input 1</label></td>
+					<td><div class="circleCenter"><div class="Inp circle inputOff"></div></div></td>
+					<td><input class="inputRelay inputRelay1" type="checkbox" value="1"/></td>
+					<td><input class="inputRelay inputRelay2" type="checkbox" value="2"/></td>
+					<td><input class="inputRelay inputRelay3" type="checkbox" value="4"/></td>
+					<td><input class="inputRelay inputRelay4" type="checkbox" value="8"/></td>
+					<td><input class="inputRelay inputRelay5" type="checkbox" value="16"/></td>
+					<td><input class="inputRelay inputRelay6" type="checkbox" value="32"/></td>
+					<td><input class="inputRelay inputRelay7" type="checkbox" value="64"/></td>
+					<td><input class="inputRelay inputRelay8" type="checkbox" value="128"/></td>
+				</tr>
+				<tr class="Inp Inp2" data-input="2">
+					<td><label class="Inp">Input 2</label></td>
+					<td><div class="circleCenter"><div class="Inp circle inputOff"></div></div></td>
+					<td><input class="inputRelay inputRelay1" type="checkbox" value="1"/></td>
+					<td><input class="inputRelay inputRelay2" type="checkbox" value="2"/></td>
+					<td><input class="inputRelay inputRelay3" type="checkbox" value="4"/></td>
+					<td><input class="inputRelay inputRelay4" type="checkbox" value="8"/></td>
+					<td><input class="inputRelay inputRelay5" type="checkbox" value="16"/></td>
+					<td><input class="inputRelay inputRelay6" type="checkbox" value="32"/></td>
+					<td><input class="inputRelay inputRelay7" type="checkbox" value="64"/></td>
+					<td><input class="inputRelay inputRelay8" type="checkbox" value="128"/></td>
+				</tr>
+				<tr class="Inp Inp3" data-input="3">
+					<td><label class="Inp">Input 3</label></td>
+					<td><div class="circleCenter"><div class="Inp circle inputOff"></div></div></td>
+					<td><input class="inputRelay inputRelay1" type="checkbox" value="1"/></td>
+					<td><input class="inputRelay inputRelay2" type="checkbox" value="2"/></td>
+					<td><input class="inputRelay inputRelay3" type="checkbox" value="4"/></td>
+					<td><input class="inputRelay inputRelay4" type="checkbox" value="8"/></td>
+					<td><input class="inputRelay inputRelay5" type="checkbox" value="16"/></td>
+					<td><input class="inputRelay inputRelay6" type="checkbox" value="32"/></td>
+					<td><input class="inputRelay inputRelay7" type="checkbox" value="64"/></td>
+					<td><input class="inputRelay inputRelay8" type="checkbox" value="128"/></td>
+				</tr>
+				<tr class="Inp Inp4" data-input="4">
+					<td><label class="Inp">Input 4</label></td>
+					<td><div class="circleCenter"><div class="Inp circle inputOff"></div></div></td>
+					<td><input class="inputRelay inputRelay1" type="checkbox" value="1"/></td>
+					<td><input class="inputRelay inputRelay2" type="checkbox" value="2"/></td>
+					<td><input class="inputRelay inputRelay3" type="checkbox" value="4"/></td>
+					<td><input class="inputRelay inputRelay4" type="checkbox" value="8"/></td>
+					<td><input class="inputRelay inputRelay5" type="checkbox" value="16"/></td>
+					<td><input class="inputRelay inputRelay6" type="checkbox" value="32"/></td>
+					<td><input class="inputRelay inputRelay7" type="checkbox" value="64"/></td>
+					<td><input class="inputRelay inputRelay8" type="checkbox" value="128"/></td>
+				</tr>
+				<tr class="Inp Inp5" data-input="5">
+					<td><label class="Inp">Input 5</label></td>
+					<td><div class="circleCenter"><div class="Inp circle inputOff"></div></div></td>
+					<td><input class="inputRelay inputRelay1" type="checkbox" value="1"/></td>
+					<td><input class="inputRelay inputRelay2" type="checkbox" value="2"/></td>
+					<td><input class="inputRelay inputRelay3" type="checkbox" value="4"/></td>
+					<td><input class="inputRelay inputRelay4" type="checkbox" value="8"/></td>
+					<td><input class="inputRelay inputRelay5" type="checkbox" value="16"/></td>
+					<td><input class="inputRelay inputRelay6" type="checkbox" value="32"/></td>
+					<td><input class="inputRelay inputRelay7" type="checkbox" value="64"/></td>
+					<td><input class="inputRelay inputRelay8" type="checkbox" value="128"/></td>
+				</tr>
+				<tr class="Inp Inp6" data-input="6">
+					<td><label class="Inp">Input 6</label></td>
+					<td><div class="circleCenter"><div class="Inp circle inputOff"></div></div></td>
+					<td><input class="inputRelay inputRelay1" type="checkbox" value="1"/></td>
+					<td><input class="inputRelay inputRelay2" type="checkbox" value="2"/></td>
+					<td><input class="inputRelay inputRelay3" type="checkbox" value="4"/></td>
+					<td><input class="inputRelay inputRelay4" type="checkbox" value="8"/></td>
+					<td><input class="inputRelay inputRelay5" type="checkbox" value="16"/></td>
+					<td><input class="inputRelay inputRelay6" type="checkbox" value="32"/></td>
+					<td><input class="inputRelay inputRelay7" type="checkbox" value="64"/></td>
+					<td><input class="inputRelay inputRelay8" type="checkbox" value="128"/></td>
+				</tr>
+				<tr class="Inp Inp7" data-input="7">
+					<td><label class="Inp">Input 7</label></td>
+					<td><div class="circleCenter"><div class="Inp circle inputOff"></div></div></td>
+					<td><input class="inputRelay inputRelay1" type="checkbox" value="1"/></td>
+					<td><input class="inputRelay inputRelay2" type="checkbox" value="2"/></td>
+					<td><input class="inputRelay inputRelay3" type="checkbox" value="4"/></td>
+					<td><input class="inputRelay inputRelay4" type="checkbox" value="8"/></td>
+					<td><input class="inputRelay inputRelay5" type="checkbox" value="16"/></td>
+					<td><input class="inputRelay inputRelay6" type="checkbox" value="32"/></td>
+					<td><input class="inputRelay inputRelay7" type="checkbox" value="64"/></td>
+					<td><input class="inputRelay inputRelay8" type="checkbox" value="128"/></td>
+				</tr>
+				<tr class="Inp Inp8" data-input="8">
+					<td><label class="Inp">Input 8</label></td>
+					<td><div class="circleCenter"><div class="Inp circle inputOff"></div></div></td>
+					<td><input class="inputRelay inputRelay1" type="checkbox" value="1"/></td>
+					<td><input class="inputRelay inputRelay2" type="checkbox" value="2"/></td>
+					<td><input class="inputRelay inputRelay3" type="checkbox" value="4"/></td>
+					<td><input class="inputRelay inputRelay4" type="checkbox" value="8"/></td>
+					<td><input class="inputRelay inputRelay5" type="checkbox" value="16"/></td>
+					<td><input class="inputRelay inputRelay6" type="checkbox" value="32"/></td>
+					<td><input class="inputRelay inputRelay7" type="checkbox" value="64"/></td>
+					<td><input class="inputRelay inputRelay8" type="checkbox" value="128"/></td>
+				</tr>
+			</tbody>
+		</table>
+	
+	</div>
 </div>
 </body>
 </html>

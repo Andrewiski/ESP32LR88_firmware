@@ -1,0 +1,25 @@
+{
+	"boardName":"DeVries House Bedrooms",
+	"inputs":[
+		{"name":"Master Bedroom Switch 1"},
+		{"name":"Master Bedroom Switch 2"},
+		{"name":"Master Bathroom Switch"},
+		{"name":"Teo Bedroom Switch"},
+		{"name":"Alex Bedroom Switch"},
+		{"name":"Bathroom"},
+		{"name":"Hallway Switch 1"},
+		{"name":"Hallway Switch 2"}
+	
+	],
+	"relays": [
+		{"name":"Unknown"},
+		{"name":"Hallway"},
+		{"name":"Bathroom"},
+		{"name":"Alex Bedroom"},
+		{"name":"Teo Bedroom"},
+		{"name":"Master Bathroom"},
+		{"name":"Master Bedroom"},
+		{"name":"Master Bedroom Door"}
+	]
+
+}
