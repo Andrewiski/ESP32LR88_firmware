@@ -4,7 +4,7 @@
  * 
  */
 const boolean inputsDebug = false;
-const int debounceCount = 25;
+const int debounceCount = 45;
 const int longPressCount = 1000;
 const int betweenPressCount = 250;
 const int relayCount = 8;
