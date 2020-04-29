@@ -3,10 +3,10 @@
  * 
  * 
  */
-const boolean inputsDebug = false;
-const int debounceCount = 45;
+const boolean inputsDebug = true;
+const int debounceCount = 20;
 const int longPressCount = 1000;
-const int betweenPressCount = 250;
+const int betweenPressCount = 150;
 const int relayCount = 8;
 const int inputCount = 8;
 //This is the bitwise (so you can or and trip two at a time) assignment of what relay the input should trigger
@@ -15,7 +15,7 @@ uint8_t inputRelays[inputCount] = {64,128,32,16,8,4,2,1};
 
 const int relays[relayCount] = {Rly1, Rly2, Rly3, Rly4, Rly5, Rly6, Rly7, Rly8};
 const int inputs[inputCount] = {Inp1, Inp2, Inp3, Inp4, Inp5, Inp6, Inp7, Inp8};
-boolean inputState[inputCount] = {0,0,0,0,0,0,0,0};
+int inputState[inputCount] = {0,0,0,0,0,0,0,0};
 long inputPressTime[inputCount] = {0,0,0,0,0,0,0,0};
 
 
@@ -167,7 +167,7 @@ void checkInput(int inputIndex){
   int tmpInput = digitalRead(inputs[inputIndex]);
   long tmpTime = millis();
   
-  if(inputState[inputIndex] == 0 && tmpInput == 0 ){
+  if(inputState[inputIndex] == 0 && tmpInput == 0  ){
     //This is a first press
     inputState[inputIndex] = 1;
     inputPressTime[inputIndex] = millis();
@@ -181,8 +181,8 @@ void checkInput(int inputIndex){
       longPressInput(inputIndex);
     }else{
       if(inputsDebug) Serial.println("Input " + String(inputIndex) + " Released Short Press "  + String((tmpTime - inputPressTime[inputIndex])) + " (" + String(inputState[inputIndex]) + ", " + String(tmpTime) +", " + String(inputPressTime[inputIndex]) + ")"  );
-      inputState[inputIndex] = 0;
-      inputPressTime[inputIndex] = 0;
+      inputState[inputIndex] = 2;
+      inputPressTime[inputIndex] = millis();
       singlePressInput(inputIndex);
     }
   }else if(inputState[inputIndex] == 1 && tmpInput == 1 && (tmpTime - inputPressTime[inputIndex]) <= debounceCount ){
@@ -190,6 +190,10 @@ void checkInput(int inputIndex){
     //This was a short press or bounce as  it was pressed
     inputState[inputIndex] = 0;
     inputPressTime[inputIndex] = 0;
+  }else if(inputState[inputIndex] == 2  && (tmpTime - inputPressTime[inputIndex]) >= betweenPressCount ){
+    if(inputsDebug) Serial.println("Input " + String(inputIndex) + " Between Press timout " + String((tmpTime - inputPressTime[inputIndex])));
+    inputPressTime[inputIndex] = 0;
+    inputState[inputIndex] = 0;
   }
   
 }
